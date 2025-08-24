@@ -47,7 +47,7 @@ jobs:
       - name: Set Environment Variables
         run: |
           echo "APP_ENV=production" >> $GITHUB_ENV
-          echo "PORT=3000" >> $GITHUB_ENV
+          echo "PORT=3001" >> $GITHUB_ENV
 
       - name: Verify Deployment Files
         run: ls -la

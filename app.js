@@ -1,7 +1,7 @@
 // This change will trigger the CI/CD pipeline - [Isra Ashfaq]
 const express = require('express');
 const app = express();
-const port = 3000;
+const port = 3001;
 
 // Basic route
 app.get('/', (req, res) => {
