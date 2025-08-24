@@ -9,20 +9,26 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
-
+    
     steps:
-      # Download using GitHub CLI (no installation needed)
-      - name: Download artifact
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Configure Git with the PAT for authentication
+      - name: Setup Git authentication
         run: |
-          gh run download ${{ github.event.workflow_run.id }} --artifact node-app-artifact --dir .
+          git config --global url."https://api:${{ secrets.RUNNER_ACCESS_TOKEN }}@github.com/".insteadOf "https://github.com/"
           
-      - name: List downloaded files
+      # Download the artifact using the download action with the PAT
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: node-app-artifact
+          path: .
+          token: ${{ secrets.RUNNER_ACCESS_TOKEN }}
+          
+      - name: List files
         run: ls -la
-
+        
       - name: Install dependencies
         run: npm install
-
+        
       - name: Start server
         run: npm start

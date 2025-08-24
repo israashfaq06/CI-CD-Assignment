@@ -23,14 +23,12 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Create build package
+      - name: Create build files
         run: |
           mkdir -p build
           cp app.js package.json build/
-          echo "Files in build directory:"
-          ls -la build/
 
-      - name: Upload build artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: node-app-artifact
