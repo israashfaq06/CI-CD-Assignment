@@ -4,11 +4,6 @@ on:
   push:
     branches: [ "main" ]
 
-permissions:
-  contents: read
-  actions: read
-  packages: write
-
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -22,22 +17,19 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Dependencies
-        run: |
-          npm cache clean --force
-          npm install --no-audit --no-fund
+      - name: Install dependencies
+        run: npm install
 
-      - name: Run Tests
+      - name: Run tests
         run: npm test
 
-      - name: Build Project (List files)
-        run: ls -la
+      - name: Create build directory
+        run: |
+          mkdir -p build
+          cp app.js package.json build/
 
-      - name: Create Deployment Package
-        run: zip -r my-app.zip . -x '*.git*' 'node_modules/*'
-
-      - name: Upload Artifact
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: node-app-package
-          path: my-app.zip
+          name: app-build
+          path: build

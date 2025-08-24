@@ -11,57 +11,17 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Download Artifact
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: node-app-package
-          path: ./deployment-package
+          name: app-build
+          path: .
 
-      - name: Unzip and Show Contents
-        run: |
-          unzip -o ./deployment-package/my-app.zip -d ./live-app
-          echo "=== CONTENTS OF LIVE-APP ==="
-          ls -la ./live-app/
-          echo "=== PACKAGE.JSON ==="
-          cat ./live-app/package.json
+      - name: List files to verify
+        run: ls -la
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: npm install
-        working-directory: ./live-app
 
-      - name: Check Port 3001
-        run: |
-          echo "=== CHECKING PORT 3001 ==="
-          netstat -tuln | grep :3001 || echo "Port 3001 is available"
-          echo "=== ALL NODE PROCESSES ==="
-          ps aux | grep node || echo "No node processes found"
-
-      - name: Test Server Start
-        run: |
-          echo "=== TESTING SERVER START ==="
-          timeout 10s npm start || echo "Server test completed"
-          echo "=== AFTER SERVER TEST ==="
-          netstat -tuln | grep :3001 || echo "Server not listening on port 3001"
-        working-directory: ./live-app
-
-      - name: Quick Start and Check
-        run: |
-          echo "=== STARTING SERVER IN BACKGROUND ==="
-          npm start > server.log 2>&1 &
-          SERVER_PID=$!
-          echo "Server PID: $SERVER_PID"
-          
-          sleep 3  # Wait a bit
-          
-          echo "=== SERVER STATUS ==="
-          ps -p $SERVER_PID >/dev/null && echo "SERVER IS RUNNING" || echo "SERVER DIED"
-          
-          echo "=== SERVER LOGS ==="
-          cat server.log
-          
-          echo "=== PORT CHECK ==="
-          netstat -tuln | grep :3001 || echo "NOT LISTENING ON 3001"
-          
-          echo "=== KILLING SERVER ==="
-          kill $SERVER_PID 2>/dev/null || true
-        working-directory: ./live-app
+      - name: Start server
+        run: npm start
