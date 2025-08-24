@@ -1,0 +1,56 @@
+name: CD Pipeline
+
+# Step 1: Trigger this workflow when the CI pipeline completes successfully
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"] # This must match the 'name' in your ci.yml file
+    types:
+      - completed
+
+# Step 2: Define the job
+jobs:
+  deploy:
+    # THIS IS THE MOST IMPORTANT PART: This job MUST run on your self-hosted runner.
+    # Replace 'self-hosted' with the label you used when setting up your runner if different.
+    runs-on: self-hosted
+
+    steps:
+      # Step 3: Download the artifact that was uploaded by the CI pipeline
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: node-app-package # This must match the name from the upload step
+          path: ./deployment-package
+
+      # Step 4: Navigate into the downloaded package and unzip it
+      - name: Unzip and Prepare Artifact
+        run: |
+          cd ./deployment-package
+          unzip -o my-app.zip -d ../live-app
+          cd ../live-app
+
+      # Step 5: Install dependencies on the deployment machine
+      - name: Install Dependencies
+        run: npm ci --production # Only installs production deps, no dev deps
+        working-directory: ./live-app
+
+      # Step 6: Set environment variables (as required by your assignment)
+      - name: Set Environment Variables
+        run: |
+          echo "APP_ENV=production" >> $GITHUB_ENV
+          echo "PORT=3000" >> $GITHUB_ENV
+        working-directory: ./live-app
+
+      # Step 7: List files to verify deployment (optional but helpful)
+      - name: Verify Deployment Files
+        run: ls -la
+        working-directory: ./live-app
+
+      # Step 8: Start the application
+      # This will run it in the foreground. The runner will wait until it stops.
+      - name: Start Application
+        run: npm start
+        working-directory: ./live-app
+        env:
+          PORT: ${{ env.PORT }}
+          APP_ENV: ${{ env.APP_ENV }}
