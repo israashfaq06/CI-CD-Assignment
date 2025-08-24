@@ -11,51 +11,57 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      # Step 1: Get information about the triggering workflow
-      - name: Get workflow info
-        run: |
-          echo "CI_RUN_ID=${{ github.event.workflow_run.id }}" >> $GITHUB_ENV
-          echo "REPO=${{ github.repository }}" >> $GITHUB_ENV
-      # had to download Github CLI which will help in downloading artifact via Github CLI
-      - name: Install GitHub CLI
-        run: |
-              type -p curl >/dev/null || (sudo apt update && sudo apt install curl -y)
-              curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-              sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-              echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-              sudo apt update
-              sudo apt install gh -y
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: node-app-package
+          path: ./deployment-package
 
-      # Step 2: Download the artifact using GitHub CLI
-      - name: Download artifact via GitHub CLI
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Unzip and Show Contents
         run: |
-          gh run download ${{ env.CI_RUN_ID }} --artifact node-app-package --dir deployment-package
-          
-      # Step 3: Rest of your deployment steps
-      - name: Unzip and Prepare Artifact
-        run: |
-          cd ./deployment-package
-          unzip -o my-app.zip -d ../live-app
-          cd ../live-app
+          unzip -o ./deployment-package/my-app.zip -d ./live-app
+          echo "=== CONTENTS OF LIVE-APP ==="
+          ls -la ./live-app/
+          echo "=== PACKAGE.JSON ==="
+          cat ./live-app/package.json
 
       - name: Install Dependencies
-        run: npm ci --production
+        run: npm install
         working-directory: ./live-app
 
-      - name: Set Environment Variables
+      - name: Check Port 3001
         run: |
-          echo "APP_ENV=production" >> $GITHUB_ENV
-          echo "PORT=3001" >> $GITHUB_ENV
+          echo "=== CHECKING PORT 3001 ==="
+          netstat -tuln | grep :3001 || echo "Port 3001 is available"
+          echo "=== ALL NODE PROCESSES ==="
+          ps aux | grep node || echo "No node processes found"
 
-      - name: Verify Deployment Files
-        run: ls -la
+      - name: Test Server Start
+        run: |
+          echo "=== TESTING SERVER START ==="
+          timeout 10s npm start || echo "Server test completed"
+          echo "=== AFTER SERVER TEST ==="
+          netstat -tuln | grep :3001 || echo "Server not listening on port 3001"
         working-directory: ./live-app
 
-      - name: Start Application
-        run: npm start
+      - name: Quick Start and Check
+        run: |
+          echo "=== STARTING SERVER IN BACKGROUND ==="
+          npm start > server.log 2>&1 &
+          SERVER_PID=$!
+          echo "Server PID: $SERVER_PID"
+          
+          sleep 3  # Wait a bit
+          
+          echo "=== SERVER STATUS ==="
+          ps -p $SERVER_PID >/dev/null && echo "SERVER IS RUNNING" || echo "SERVER DIED"
+          
+          echo "=== SERVER LOGS ==="
+          cat server.log
+          
+          echo "=== PORT CHECK ==="
+          netstat -tuln | grep :3001 || echo "NOT LISTENING ON 3001"
+          
+          echo "=== KILLING SERVER ==="
+          kill $SERVER_PID 2>/dev/null || true
         working-directory: ./live-app
-        env:
-          PORT: ${{ env.PORT }}
-          APP_ENV: ${{ env.APP_ENV }}
