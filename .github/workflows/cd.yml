@@ -9,26 +9,27 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
-    
+
     steps:
-      # Configure Git with the PAT for authentication
-      - name: Setup Git authentication
-        run: |
-          git config --global url."https://api:${{ secrets.RUNNER_ACCESS_TOKEN }}@github.com/".insteadOf "https://github.com/"
-          
-      # Download the artifact using the download action with the PAT
+      # Download artifact using PAT token
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: node-app-artifact
-          path: .
-          token: ${{ secrets.RUNNER_ACCESS_TOKEN }}
-          
-      - name: List files
-        run: ls -la
-        
+          name: node-app-build
+          path: ${{ github.workspace }}/build
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Verify downloaded files
+        run: |
+          echo "Downloaded files:"
+          ls -la ${{ github.workspace }}/build/
+          echo "Package.json content:"
+          cat ${{ github.workspace }}/build/package.json
+
       - name: Install dependencies
         run: npm install
-        
+        working-directory: ${{ github.workspace }}/build
+
       - name: Start server
         run: npm start
+        working-directory: ${{ github.workspace }}/build
