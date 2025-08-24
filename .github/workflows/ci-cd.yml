@@ -1,0 +1,57 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+      - name: Create build directory
+        run: |
+          mkdir -p build
+          cp app.js package.json build/
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-build
+          path: build
+
+  deploy:
+    runs-on: self-hosted
+    needs: build  # This ensures deploy runs only after build succeeds
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-build
+          path: build
+
+      - name: List files to verify
+        run: ls -la build
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: build
+
+      - name: Start server
+        run: npm start
+        working-directory: build
